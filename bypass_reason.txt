@@ -1,7 +1,0 @@
-Temporary TLS bypass is enabled for local debugging because the environment 
-injects a self-signed or corporate MITM certificate that is not trusted by 
-the default CA store. For rapid testing we set ASKHR_DISABLE_SSL_VERIFY=true, 
-which disables certificate verification for outgoing HTTPS calls. 
-This should not be used in production; 
-the proper fix is to trust the corporate root CA (set REQUESTS_CA_BUNDLE/SSL_CERT_FILE to the PEM) 
-or configure outbound egress without interception.
