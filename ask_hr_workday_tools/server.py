@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, Response
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -28,6 +28,12 @@ if str(os.getenv("ASKHR_RESET_AUTH_ON_STARTUP", "true")).lower() in ("1", "true"
 async def index(request: Request):
     """Serve the main HTML interface."""
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Return empty favicon to avoid 404 noise."""
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.post("/chat")

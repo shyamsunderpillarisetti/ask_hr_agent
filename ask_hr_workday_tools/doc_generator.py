@@ -4,9 +4,16 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from io import BytesIO
 
+import warnings
 from docx import Document
 from jinja2 import Environment, StrictUndefined
 try:
+    # Silence docxcompose/pkg_resources deprecation noise during import
+    warnings.filterwarnings(
+        "ignore",
+        category=UserWarning,
+        module=r"docxcompose\.properties",
+    )
     from docxtpl import DocxTemplate  # Optional, used for templated docs
     _HAS_DOXCTPL = True
 except Exception:
