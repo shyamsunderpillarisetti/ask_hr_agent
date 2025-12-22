@@ -1,0 +1,15 @@
+GOOGLE_GENAI_USE_VERTEXAI=FALSE
+GOOGLE_API_KEY=
+PYTHONWARNINGS=ignore::DeprecationWarning
+NODE_TLS_REJECT_UNAUTHORIZED=0
+ASKHR_SELENIUM_DEBUG=true
+WORKDAY_AUTH_URL=https://wd5-impl.workday.com/michaels1/authorize
+WORKDAY_TOKEN_URL=https://wd5-impl-services1.workday.com/ccx/oauth2/michaels1/token
+WORKDAY_BASE_URL=https://wd5-impl-services1.workday.com
+WORKDAY_TENANT=michaels1
+WORKDAY_CLIENT_ID=OWUxMWExYzgtOTQwMS00YmZmLWI5ZmUtNjFhNjRiOTQ0ODBj
+WORKDAY_CLIENT_SECRET=6vg4pq4kf6g4wbwcdmevhczvvtci3r5wj9w49wh433cqsiswcjfhhfb3kqb3rq3hgcqblxnysmy1yp5q485tdvzye0j209eytl8
+WORKDAY_REDIRECT_URI=https://localhost:8443/callback
+WORKDAY_RESPONSE_TYPE=code
+WORKDAY_GRANT_TYPE=authorization_code
+WORKDAY_SCOPE=Tenant Non-Configurable Staffing Benefits Public Data Contact Information Time Off and Leave
