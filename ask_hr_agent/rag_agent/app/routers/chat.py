@@ -9,6 +9,7 @@ from datetime import datetime
 router = APIRouter()
 logger = logging.getLogger(__name__)
 orchestrator = RouterAgent()
+GREETING_MESSAGE = "Hello! I'm the AskHR agent for Michaels."
 
 # In-memory session store for MVP
 sessions = {}
@@ -18,7 +19,7 @@ async def create_session(_request: CreateSessionRequest, user: UserContext = Dep
     session_id = str(uuid.uuid4())
     sessions[session_id] = {
         "user_id": user.user_id,
-        "history": [],
+        "history": [{"role": "assistant", "content": GREETING_MESSAGE}],
         "created_at": datetime.now()
     }
     return SessionResponse(session_id=session_id, created_at=sessions[session_id]["created_at"])

@@ -17,7 +17,7 @@ from app.services.workday_tools import WorkdayToolsService
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_INSTRUCTION = """You are Ask HR, an HR assistant for Michaels.
+SYSTEM_INSTRUCTION = """You are the AskHR agent for Michaels.
 
 Routing rules:
 - Use workday_chat for time off, leave balances, employment verification letters, or any Workday data/actions.
@@ -106,13 +106,17 @@ class RouterAgent:
         self,
         query: str,
         user_context: UserContext,
-        _history: List[Dict],
+        history: List[Dict],
         session_id: str,
     ) -> ChatResponse:
         q = query.strip().lower()
         if self._is_greeting(q):
+            if not history:
+                reply_text = "Hello! I'm the AskHR agent for Michaels."
+            else:
+                reply_text = "How can I help you today?"
             return ChatResponse(
-                reply_text="Hello! How can I help you today?",
+                reply_text=reply_text,
                 metadata={"agent": "system"},
             )
 

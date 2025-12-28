@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Michaels AskHR API",
-    description="AI-powered HR Assistant Backend",
+    description="AI-powered AskHR Agent Backend",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -410,7 +410,7 @@ class RoutingResult(BaseModel):
     reasoning: str = ""
 
 class RouterAgent:
-    ROUTING_PROMPT = """You are an HR assistant router. Analyze the user's message and determine which specialized agent should handle it.
+    ROUTING_PROMPT = """You are an AskHR agent router. Analyze the user's message and determine which specialized agent should handle it.
 
 Available agents:
 1. POLICY_BENEFITS - Questions about company policies, benefits (health, dental, 401k), employee handbook, PTO policies
@@ -1028,7 +1028,7 @@ class GeminiService:
         self,
         prompt: str,
         documents: List[Dict[str, str]],
-        system_instruction: str = "You are a helpful HR assistant. Answer based on the provided documents. Cite sources."
+        system_instruction: str = "You are a helpful AskHR agent. Answer based on the provided documents. Cite sources."
     ) -> Dict[str, Any]:
         """
         Generate grounded response with citations

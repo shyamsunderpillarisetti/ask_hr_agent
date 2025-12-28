@@ -36,10 +36,11 @@ export default function ChatContainer({ user }) {
       const newConversation = await Promise.race([chatPromise, timeoutPromise]);
       
       setRagConversation(newConversation);
+      const welcomeMessage = "Hello! I'm the AskHR agent for Michaels.";
       setMessages([{
         id: 'welcome-' + Date.now(),
         role: 'assistant',
-        content: 'Hello! I am your HR assistant. How can I help you today?',
+        content: welcomeMessage,
         created_at: new Date().toISOString()
       }]);
     } catch (error) {

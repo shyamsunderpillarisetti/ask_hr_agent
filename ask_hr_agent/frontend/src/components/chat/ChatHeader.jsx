@@ -25,7 +25,7 @@ export default function ChatHeader({ user, onToggleHistory, onNewChat, showHisto
               Online
             </span>
           </h1>
-          <p className="text-xs text-slate-500">Michaels HR Assistant</p>
+          <p className="text-xs text-slate-500">Michaels AskHR Agent</p>
         </div>
       </div>
       
