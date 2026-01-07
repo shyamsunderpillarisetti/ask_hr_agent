@@ -2,7 +2,6 @@ from typing import Dict, List, Optional
 import asyncio
 import logging
 import os
-import re
 
 from google.adk.agents import LlmAgent
 from google.adk.dependencies import vertexai as adk_vertexai
@@ -11,35 +10,25 @@ from google.adk.runners import InMemoryRunner
 from google.genai import types
 
 from app.config import settings
-from app.models.dto import ChatResponse, Citation, UserContext
-from app.services.workday_tools import WorkdayToolsService
+from app.models.dto import ChatResponse, Citation
 
 
 logger = logging.getLogger(__name__)
 
 SYSTEM_INSTRUCTION = """You are the AskHR agent for Michaels.
 
-Routing rules:
-- Use workday_chat for time off, leave balances, employment verification letters, or any Workday data/actions.
-- Use rag_retrieve for policy, benefits, and general HR questions that don't require Workday actions.
-
-When using rag_retrieve:
-- Call rag_retrieve first.
-- Answer only using the returned contexts.
-- If no context is returned, say you cannot find the information in the provided documents.
-
-When using workday_chat:
-- Call workday_chat and return its output to the user without adding extra steps.
+Always call rag_retrieve first.
+Answer only using the returned contexts.
+If no context is returned, say you cannot find the information in the provided documents.
 """
 
 
-class RouterAgent:
+class RagAgent:
     def __init__(self):
-        self.workday_tools = WorkdayToolsService(settings.WORKDAY_TOOLS_URL)
         self._vertex_initialized = False
         self._ensure_vertex_env()
         self._agent = self._build_agent()
-        self._runner = InMemoryRunner(self._agent, app_name="ask_hr_agent")
+        self._runner = InMemoryRunner(self._agent, app_name="ask_hr_rag")
 
     def _ensure_vertex_env(self) -> None:
         os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "true")
@@ -52,16 +41,17 @@ class RouterAgent:
         adk_vertexai.vertexai.init(
             project=settings.GOOGLE_PROJECT_ID,
             location=settings.GOOGLE_LOCATION,
+            api_transport="rest",
         )
         self._vertex_initialized = True
 
     def _build_agent(self) -> LlmAgent:
-        model_name = os.getenv("ASKHR_RAG_MODEL", "gemini-2.5-pro")
+        model_name = settings.ASKHR_RAG_MODEL
         return LlmAgent(
-            name="ask_hr_router",
+            name="ask_hr_rag",
             model=Gemini(model=model_name),
             instruction=SYSTEM_INSTRUCTION,
-            tools=[self.rag_retrieve, self.workday_chat],
+            tools=[self.rag_retrieve],
             generate_content_config=types.GenerateContentConfig(temperature=0.2),
         )
 
@@ -97,31 +87,9 @@ class RouterAgent:
 
         return {"contexts": contexts, "citations": citations}
 
-    async def workday_chat(self, query: str) -> Dict[str, str]:
-        """Proxy Workday requests to the Workday tools agent."""
-        response = await self.workday_tools.chat(query)
-        return {"reply_text": response.reply_text}
-
-    async def route_and_process(
-        self,
-        query: str,
-        user_context: UserContext,
-        history: List[Dict],
-        session_id: str,
-    ) -> ChatResponse:
-        q = query.strip().lower()
-        if self._is_greeting(q):
-            if not history:
-                reply_text = "Hello! I'm the AskHR agent for Michaels."
-            else:
-                reply_text = "How can I help you today?"
-            return ChatResponse(
-                reply_text=reply_text,
-                metadata={"agent": "system"},
-            )
-
-        user_id = user_context.user_id or "anonymous"
-        await self._ensure_session(user_id, session_id)
+    async def answer(self, query: str, user_id: str, session_id: str) -> ChatResponse:
+        safe_user_id = user_id or "anonymous"
+        await self._ensure_session(safe_user_id, session_id)
         content = types.Content(
             role="user",
             parts=[types.Part.from_text(text=query)],
@@ -129,10 +97,10 @@ class RouterAgent:
 
         reply_text = ""
         citations: List[Citation] = []
-        metadata: Dict[str, str] = {"agent": "adk"}
+        metadata: Dict[str, str] = {"agent": "rag"}
 
         async for event in self._runner.run_async(
-            user_id=user_id,
+            user_id=safe_user_id,
             session_id=session_id,
             new_message=content,
         ):
@@ -144,8 +112,6 @@ class RouterAgent:
 
                 if tool_name == "rag_retrieve":
                     citations = self._parse_citations(payload)
-                elif tool_name == "workday_chat":
-                    metadata["agent"] = "workday_tools"
 
             if event.is_final_response():
                 reply_text = self._extract_text(event.content) or reply_text
@@ -193,12 +159,3 @@ class RouterAgent:
                 confidence=item.get("confidence"),
             ))
         return citations
-
-    @staticmethod
-    def _is_greeting(text: str) -> bool:
-        if not text:
-            return False
-        greeting_pattern = re.compile(
-            r"^((hi|hello|hey|hiya|howdy|yo|sup)( there)?|(good morning|good afternoon|good evening|morning|afternoon|evening))([!.,]?)$"
-        )
-        return greeting_pattern.match(text) is not None

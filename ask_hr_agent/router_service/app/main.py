@@ -2,6 +2,7 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.config import settings
 from app.routers import chat
 from app.tls import configure_tls
@@ -10,6 +11,7 @@ from app.tls import configure_tls
 class _GenaiNonTextWarningFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         return "non-text parts in the response" not in record.getMessage()
+
 
 configure_tls()
 logging.getLogger("google.genai.types").addFilter(_GenaiNonTextWarningFilter())
@@ -28,10 +30,13 @@ app.add_middleware(
 # Routers
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "env": settings.ENV}
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app.main:app", host="0.0.0.0", port=settings.PORT, reload=True)

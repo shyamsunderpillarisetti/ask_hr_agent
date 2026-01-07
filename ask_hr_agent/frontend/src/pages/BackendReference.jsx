@@ -300,7 +300,7 @@ from pydantic import BaseModel
 from enum import Enum
 
 from app.auth.dependencies import UserContext
-from app.agents.router_agent import RouterAgent
+from app.agents.router_service import RouterAgent
 from app.agents.policy_benefits_agent import PolicyBenefitsAgent
 from app.agents.leave_agent import LeaveAgent
 from app.agents.verification_agent import VerificationAgent
@@ -328,7 +328,7 @@ class AgentOrchestrator:
     def __init__(self):
         self.rag_service = RAGService()
         self.llm_service = GeminiService()
-        self.router_agent = RouterAgent(self.llm_service)
+        self.router_service = RouterAgent(self.llm_service)
         
         self.agents = {
             AgentType.POLICY_BENEFITS: PolicyBenefitsAgent(self.rag_service, self.llm_service),
@@ -354,7 +354,7 @@ class AgentOrchestrator:
         history = await session_manager.get_messages(session_id, limit=10)
         
         # Route to appropriate agent
-        routing_result = await self.router_agent.route(
+        routing_result = await self.router_service.route(
             message=message,
             history=history,
             user_context=user_context
@@ -385,7 +385,7 @@ class AgentOrchestrator:
         )
 `,
 
-  'app/agents/router_agent.py': `"""
+  'app/agents/router_service.py': `"""
 Router Agent
 Classifies intent and routes to specialized agents
 """
@@ -1149,7 +1149,7 @@ export default function BackendReference() {
     'Authentication': ['app/auth/dependencies.py'],
     'Routers': ['app/routers/chat.py'],
     'Services': ['app/services/orchestrator.py', 'app/services/rag.py', 'app/services/llm.py', 'app/services/workday_client.py'],
-    'Agents': ['app/agents/router_agent.py', 'app/agents/leave_agent.py']
+    'Agents': ['app/agents/router_service.py', 'app/agents/leave_agent.py']
   };
 
   return (

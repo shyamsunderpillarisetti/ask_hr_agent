@@ -1,11 +1,17 @@
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ragDir = Join-Path $root "rag_agent"
-$workdayDir = Join-Path $root "workday_tools_agent"
+$routerDir = Join-Path $root "router_service"
+$ragDir = Join-Path $root "rag_service"
+$workdayDir = Join-Path $root "workday_tools"
 $frontendDir = Join-Path $root "frontend"
 $defaultQuotaProject = "prj-dev-ai-vertex-bryz"
 $defaultCaBundle = Join-Path $root "certs\combined-ca-bundle.pem"
+$ports = @(8000, 8001, 8011, 8002, 5001, 5173)
+
+$ragPython = Join-Path $ragDir ".venv\Scripts\python.exe"
+$routerPython = $ragPython
+$workdayPython = Join-Path $workdayDir ".venv\Scripts\python.exe"
 
 function Start-ServiceWindow($title, $command) {
     $bytes = [System.Text.Encoding]::Unicode.GetBytes($command)
@@ -29,23 +35,35 @@ function Stop-Ports($ports) {
     }
 }
 
-Write-Host "Stopping existing services on ports 8000, 5001, 5173..."
-Stop-Ports @(8000, 5001, 5173)
+Write-Host ("Stopping existing services on ports {0}..." -f ($ports -join ", "))
+Stop-Ports $ports
 
 Write-Host "ADC check skipped. If needed, run: gcloud auth application-default login --project $defaultQuotaProject"
 
-Write-Host "Starting RAG backend (port 8000)..."
-$ragCommand = @'
+Write-Host "Starting Router backend (port 8000)..."
+$routerCommand = @'
 Set-Location "{0}"
-$env:WORKDAY_TOOLS_URL = "http://localhost:5001"
-$env:ASKHR_RAG_MODEL = "gemini-2.5-pro"
-$env:REQUESTS_CA_BUNDLE = "{1}\certs\combined-ca-bundle.pem"
-$env:SSL_CERT_FILE = "{1}\certs\combined-ca-bundle.pem"
-$env:GRPC_DEFAULT_SSL_ROOTS_FILE_PATH = "{1}\certs\combined-ca-bundle.pem"
+$env:PYTHONPATH = "{0}"
+$env:REQUESTS_CA_BUNDLE = "{1}"
+$env:SSL_CERT_FILE = "{1}"
+$env:GRPC_DEFAULT_SSL_ROOTS_FILE_PATH = "{1}"
 $env:RAG_RELAX_SSL = "true"
 if (-not $env:GOOGLE_CLOUD_QUOTA_PROJECT) {{ $env:GOOGLE_CLOUD_QUOTA_PROJECT = "{2}" }}
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-'@ -f $ragDir, $root, $defaultQuotaProject
+& "{3}" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+'@ -f $routerDir, $defaultCaBundle, $defaultQuotaProject, $routerPython
+Start-ServiceWindow "Router Backend" $routerCommand
+
+Write-Host "Starting RAG backend (port 8011)..."
+$ragCommand = @'
+Set-Location "{0}"
+$env:PYTHONPATH = "{0}"
+$env:REQUESTS_CA_BUNDLE = "{1}"
+$env:SSL_CERT_FILE = "{1}"
+$env:GRPC_DEFAULT_SSL_ROOTS_FILE_PATH = "{1}"
+$env:RAG_RELAX_SSL = "true"
+if (-not $env:GOOGLE_CLOUD_QUOTA_PROJECT) {{ $env:GOOGLE_CLOUD_QUOTA_PROJECT = "{2}" }}
+& "{3}" -m uvicorn app.main:app --host 0.0.0.0 --port 8011 --reload
+'@ -f $ragDir, $defaultCaBundle, $defaultQuotaProject, $ragPython
 Start-ServiceWindow "RAG Backend" $ragCommand
 
 Write-Host "Starting Workday tools backend (port 5001)..."
@@ -56,15 +74,10 @@ Get-ChildItem $workdayDir -Filter ".evl_sent.flag" -ErrorAction SilentlyContinue
 $workdayCommand = @'
 Set-Location "{0}"
 $env:PYTHONPATH = "{0}"
-$env:ASKHR_WORKDAY_MODEL = "gemini-2.5-pro"
-$env:ASKHR_CHROMEDRIVER_PATH = "{0}\workday_tools_agent\drivers\chromedriver.exe"
-$env:ASKHR_HEADLESS = "false"
-$env:ASKHR_BROWSER = "chrome"
-$env:ASKHR_SELENIUM_TIMEOUT = "120"
-$env:ASKHR_SELENIUM_DEBUG = "true"
-$env:PATH = "{0}\workday_tools_agent\drivers;{0}\workday_tools_agent;" + $env:PATH
-.\workday_tools_agent\.venv\Scripts\python.exe -m uvicorn workday_tools_agent.server:app --host 0.0.0.0 --port 5001
-'@ -f $root
+$env:ASKHR_CHROMEDRIVER_PATH = "{1}\drivers\chromedriver.exe"
+$env:PATH = "{1}\drivers;{1};" + $env:PATH
+& "{2}" -m uvicorn workday_tools.server:app --host 0.0.0.0 --port 5001
+'@ -f $root, $workdayDir, $workdayPython
 Start-ServiceWindow "Workday Tools Backend" $workdayCommand
 
 Write-Host "Starting frontend dev server (vite)..."

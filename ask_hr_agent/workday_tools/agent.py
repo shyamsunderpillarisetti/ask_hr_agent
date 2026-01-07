@@ -40,7 +40,7 @@ from google.genai import types
 
 from .workday_api import complete_oauth_flow, get_valid_time_off_dates, submit_time_off_request
 from .doc_generator import (
-    generate_docx_from_template_as_pdf,
+    generate_docx_from_template,
 )
 
 CONFIG_PATH = str(Path(__file__).parent / "config.json")
@@ -434,7 +434,7 @@ def generate_employment_verification_letter_tool() -> str:
         context = get_template_context()
         # Use legal_name if available, otherwise fall back to employee_name, then 'Employee'
         legal_name = context.get('legal_name') or context.get('employee_name') or 'Employee'
-        result = generate_docx_from_template_as_pdf(
+        result = generate_docx_from_template(
             template_name="evl_template.docx",
             context=context,
             filename=f"Employment Verification Letter - {legal_name}.docx"
@@ -482,8 +482,6 @@ def get_template_context(overrides: Optional[Dict[str, Any]] = None) -> Dict[str
         raw_legal = raw.get('legal_name', {}) if isinstance(raw, dict) else {}
         from datetime import date
         today_str = date.today().strftime("%B %d, %Y")
-        signature_image = os.getenv("HR_SIGNATURE_IMAGE", "hr_signature.png")
-        signature_width_mm = os.getenv("HR_SIGNATURE_WIDTH_MM", "40")
         header_image = os.getenv("HR_HEADER_IMAGE", "evl_header.png")
         header_width_mm = os.getenv("HR_HEADER_WIDTH_MM", "170")
         ctx = {
@@ -498,14 +496,6 @@ def get_template_context(overrides: Optional[Dict[str, Any]] = None) -> Dict[str
             "workday_id": summary.get("workday_id"),
             "today_date": today_str,
             "Today_Date": today_str,
-            # Signature placeholders
-            "hr_signature": os.getenv("HR_SIGNATURE_TEXT", "______________________________"),
-            "hr_signature_block": os.getenv(
-                "HR_SIGNATURE_BLOCK",
-                f"{os.getenv('HR_SIGNATURE_TEXT', '______________________________')}\nHR Representative\nDate: __________",
-            ),
-            "hr_signature_image": signature_image,
-            "hr_signature_width_mm": signature_width_mm,
             # Header placeholders
             "hr_header_image": header_image,
             "hr_header_width_mm": header_width_mm,
@@ -524,7 +514,6 @@ def get_template_context(overrides: Optional[Dict[str, Any]] = None) -> Dict[str
         for base_key in [
             "employee_name","legal_name","email","job_title","manager",
             "location","hire_date","worker_type","workday_id","today_date",
-            "hr_signature","hr_signature_block","hr_signature_image","hr_signature_width_mm",
             "hr_header_image","hr_header_width_mm","Header"
         ]:
             add_alias_variants(base_key)
@@ -616,7 +605,7 @@ _evl_sent_to_hr = EVL_SENT_FLAG_PATH.exists()
 def _build_agent() -> LlmAgent:
     model_name = os.getenv("ASKHR_WORKDAY_MODEL", "gemini-2.5-pro")
     return LlmAgent(
-        name="workday_tools_agent",
+        name="workday_tools",
         model=Gemini(model=model_name),
         instruction=SYSTEM_INSTRUCTION,
         tools=tools,
@@ -627,7 +616,7 @@ def _build_agent() -> LlmAgent:
 def _get_runner() -> InMemoryRunner:
     global _runner
     if _runner is None:
-        _runner = InMemoryRunner(_build_agent(), app_name="workday_tools_agent")
+        _runner = InMemoryRunner(_build_agent(), app_name="workday_tools")
     return _runner
 
 

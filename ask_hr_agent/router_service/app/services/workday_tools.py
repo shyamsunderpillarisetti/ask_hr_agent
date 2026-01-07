@@ -2,10 +2,12 @@ import asyncio
 import logging
 import time
 from pathlib import Path
+
 import requests
 from requests import exceptions as request_exceptions
-from app.models.dto import ChatResponse
+
 from app.config import settings
+from app.models.dto import ChatResponse
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,7 @@ class WorkdayToolsService:
 
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip("/")
-        self._token_cache_path = Path(__file__).resolve().parents[3] / "workday_tools_agent" / ".token_cache.json"
+        self._token_cache_path = Path(__file__).resolve().parents[3] / "workday_tools" / ".token_cache.json"
 
     def _wait_for_token_cache(self, deadline: float, interval_seconds: float = 2.0) -> bool:
         while time.time() < deadline:
@@ -37,7 +39,7 @@ class WorkdayToolsService:
                     resp = requests.post(
                         url,
                         json={"message": message},
-                        timeout=remaining
+                        timeout=remaining,
                     )
                     if resp.ok:
                         data = resp.json()
@@ -55,9 +57,9 @@ class WorkdayToolsService:
                         f"Workday tools error {resp.status_code}: {error_detail}"
                     )
                 except request_exceptions.Timeout as e:
-                    logger.warning(f"Workday tools timeout: {e}")
+                    logger.warning("Workday tools timeout: %s", e)
                 except Exception as e:
-                    logger.error(f"Workday tools call failed: {e}")
+                    logger.error("Workday tools call failed: %s", e)
 
                 if attempts >= 1 or time.time() >= deadline:
                     break
@@ -72,7 +74,7 @@ class WorkdayToolsService:
 
             return ChatResponse(
                 reply_text="Workday login may still be in progress. Please finish the browser login and try again.",
-                metadata={"agent": "workday_tools", "error": "retry_exhausted"}
+                metadata={"agent": "workday_tools", "error": "retry_exhausted"},
             )
 
         return await asyncio.to_thread(_post)

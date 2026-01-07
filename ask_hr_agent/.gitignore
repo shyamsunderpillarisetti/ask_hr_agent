@@ -24,6 +24,9 @@ workday_data_dump.json
 # Logs
 *.log
 
+# Node artifacts
+node_modules/
+
 # OS files
 .DS_Store
 Thumbs.db

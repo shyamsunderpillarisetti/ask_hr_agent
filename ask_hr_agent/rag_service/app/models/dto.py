@@ -20,6 +20,12 @@ class ChatMessage(BaseModel):
     session_id: str
     content: str
 
+
+class RagQuery(BaseModel):
+    session_id: str
+    user_id: str
+    content: str
+
 class Citation(BaseModel):
     title: str
     url: Optional[str] = None
@@ -30,6 +36,13 @@ class ChatResponse(BaseModel):
     reply_text: str
     citations: List[Citation] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+class RagRetrieveRequest(BaseModel):
+    query: str
+
+class RagRetrieveResponse(BaseModel):
+    contexts: List[str] = Field(default_factory=list)
+    citations: List[Citation] = Field(default_factory=list)
 
 class LeaveBalance(BaseModel):
     leave_type: str

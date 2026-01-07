@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     GOOGLE_PROJECT_ID: str
     GOOGLE_LOCATION: str
     RAG_CORPUS_NAME: str
+    ASKHR_RAG_MODEL: str = "gemini-2.5-pro"
 
     IBM_VERIFY_CLIENT_ID: str = ""
     IBM_VERIFY_ISSUER: str = ""
